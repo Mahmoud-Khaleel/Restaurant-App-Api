@@ -1,0 +1,52 @@
+import mongoose, { mongo } from "mongoose";
+
+const { Schema } = mongoose;
+
+const restaurantSchema = new Schema({
+  name: {
+    type: String,
+    required: [true, "Restaurant must have a name"],
+    unique: true,
+    trim: true,
+    maxlength: [40, "name must be less than or equal to 40 characters"],
+    minlength: [5, "name must be more than or equal to 5 characters"],
+  },
+  description: {
+    type: String,
+    trim: true,
+    required: [true, "A restaurant must have a description"],
+  },
+  categories: {
+    type: [String],
+    required: [true, "Restaurant must have categories."],
+  },
+  location: {
+    type: {
+      type: String,
+      default: "Point",
+      enum: ["Point"],
+      required: [true, "Restaurant must have a location"],
+    },
+    coordinates: [Number],
+    address: String,
+    description: String,
+  },
+
+  foods: [{ type: mongoose.Schema.ObjectId, ref: "Food" }],
+});
+
+restaurantSchema.pre(/^find/, function (next) {
+  if (this.options._recursed) return next();
+
+  this.populate({
+    path: "foods",
+    select: "-__v -restaurant",
+    options: { _recursed: true },
+  });
+  next();
+});
+
+//The location field stores [longitude, latitude] points and queries should use spherical geometry.
+restaurantSchema.index({ location: "2dsphere" });
+
+export default mongoose.model("Restaurant", restaurantSchema);
